@@ -1,12 +1,39 @@
 const router = require('express').Router();
 const passport = require('passport');
-const passwordUtils = require('../lib/passwordUtils');
+const genPassword = require('../lib/passwordUtils').genPassword;
 const connection = require('../config/database');
 const User = connection.models.User;
+const isAuth = require('./authMiddleware').isAuth;
+const isAdmin = require('./authMiddleware').isAdmin;
 
-router.post('/login', (req, res, next) => {});
+router.post(
+  '/login',
+  passport.authenticate('local', {
+    failureRedirect: '/login-failure',
+    successRedirect: '/login-success',
+  }),
+);
 
-router.post('/register', (req, res, next) => {});
+router.post('/register', (req, res, next) => {
+  const { username, password } = req.body;
+  const saltHash = genPassword(password);
+
+  const salt = saltHash.salt;
+  const hash = saltHash.hash;
+
+  const newUser = new User({
+    username: username,
+    hash: hash,
+    salt: salt,
+    admin: true,
+  });
+
+  newUser.save().then((user) => {
+    console.log(user);
+  });
+
+  res.redirect('/login');
+});
 
 router.get('/', (req, res, next) => {
   res.send('<h1>Home</h1><p>Please <a href="/register">register</a></p>');
@@ -32,16 +59,12 @@ router.get('/register', (req, res, next) => {
   res.send(form);
 });
 
-router.get('/protected-route', (req, res, next) => {
-  if (req.isAuthenticated()) {
-    res.send(
-      '<h1>You are authenticated</h1><p><a href="/logout">Logout and reload</a></p>',
-    );
-  } else {
-    res.send(
-      '<h1>You are not authenticated</h1><p><a href="/login">Login</a></p>',
-    );
-  }
+router.get('/protected-route', isAuth, (req, res, next) => {
+  res.send('You made it to the route.');
+});
+
+router.get('/admin-route', isAdmin, (req, res, next) => {
+  res.send('You made it to the admin route.');
 });
 
 router.get('/logout', (req, res, next) => {
