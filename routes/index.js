@@ -3,8 +3,7 @@ const passport = require('passport');
 const genPassword = require('../lib/passwordUtils').genPassword;
 const connection = require('../config/database');
 const User = connection.models.User;
-const isAuth = require('./authMiddleware').isAuth;
-const isAdmin = require('./authMiddleware').isAdmin;
+const { isAuth, isAdmin } = require('./authMiddleware');
 
 router.post(
   '/login',
@@ -16,15 +15,12 @@ router.post(
 
 router.post('/register', (req, res, next) => {
   const { username, password } = req.body;
-  const saltHash = genPassword(password);
-
-  const salt = saltHash.salt;
-  const hash = saltHash.hash;
+  const { salt, hash } = genPassword(password);
 
   const newUser = new User({
-    username: username,
-    hash: hash,
-    salt: salt,
+    username,
+    hash,
+    salt,
     admin: true,
   });
 
